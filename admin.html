@@ -51,8 +51,9 @@
             </div>
 
             <div id="content-pin" class="hidden">
-                <div class="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8 text-sm text-gray-500 text-center mt-4">PIN은 숫자 4자리로 설정해 주세요.</div>
+                <div class="bg-gray-50 border border-gray-100 rounded-2xl p-6 mb-8 text-sm text-gray-500 text-center mt-4">보안을 위해 기존 PIN과 새 PIN을 모두 입력해 주세요.</div>
                 <div class="space-y-6">
+                    <input id="current-pin" type="password" maxlength="4" class="w-full border rounded-2xl p-4 bg-gray-50 outline-none focus:border-orange-500" placeholder="기존 PIN 4자리">
                     <input id="new-pin" type="password" maxlength="4" class="w-full border rounded-2xl p-4 bg-gray-50 outline-none focus:border-orange-500" placeholder="새 PIN 4자리">
                     <input id="confirm-pin" type="password" maxlength="4" class="w-full border rounded-2xl p-4 bg-gray-50 outline-none focus:border-orange-500" placeholder="새 PIN 재입력">
                     <button id="btn-change-pin" class="w-full bg-gray-300 text-white py-5 rounded-3xl font-black text-lg shadow-sm mt-8 cursor-not-allowed" disabled>PIN 변경하기</button>
@@ -85,15 +86,17 @@
     const docRef = doc(db, "Users", elderId); // 'Users' 컬렉션 참조
 
     let currentStatus = false;
+    let dbPin = ""; // ⚠️ [추가] DB에 저장된 실제 PIN을 들고 있을 변수
 
     // 3. 실시간 데이터 감시 및 UI 업데이트
     onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
             const data = docSnap.data();
             currentStatus = data.isMissing;
+            dbPin = data.pin || ""; // ⚠️ [추가] DB의 pin 값 가져오기
             updateStatusUI(data);
 
-            // 어르신 정보 탭 필드 채우기 (이미지 속 필드명과 일치)
+            // 어르신 정보 탭 필드 채우기
             document.getElementById('info-name').value = data.name || "";
             document.getElementById('info-gender').value = data.gender || "남";
             document.getElementById('info-age').value = data.age || "";
@@ -146,7 +149,7 @@
         await updateDoc(docRef, {
             name: document.getElementById('info-name').value,
             gender: document.getElementById('info-gender').value,
-            age: Number(document.getElementById('info-age').value), // 숫자로 저장
+            age: Number(document.getElementById('info-age').value),
             address: document.getElementById('info-address').value,
             police_loc: document.getElementById('info-police').value,
             center_loc: document.getElementById('info-center').value,
@@ -156,7 +159,7 @@
         alert("정보가 성공적으로 저장되었습니다.");
     };
 
-    // 탭 전환 로직 (기존 유지)
+    // 탭 전환 로직
     window.switchTab = (tab) => {
         ['missing', 'info', 'pin'].forEach(t => {
             document.getElementById(`content-${t}`).classList.add('hidden');
@@ -166,24 +169,55 @@
         document.getElementById(`tab-${tab}`).classList.add('tab-active');
     };
 
-    // 6. PIN 변경 로직
+    // ⚠️ [수정 영역] 6. PIN 변경 로직 (3단계 입력 및 검증)
+    const curPin = document.getElementById('current-pin');
     const nPin = document.getElementById('new-pin');
     const cPin = document.getElementById('confirm-pin');
     const pBtn = document.getElementById('btn-change-pin');
     
     const valPin = () => {
-        const ok = nPin.value.length === 4 && nPin.value === cPin.value;
+        // 기존 PIN(4자리), 새 PIN(4자리)이 다 입력되었고, 새 PIN과 재입력이 똑같은지 검사
+        const isCurOk = curPin.value.length === 4;
+        const isNewOk = nPin.value.length === 4;
+        const isMatch = nPin.value === cPin.value;
+
+        const ok = isCurOk && isNewOk && isMatch;
         pBtn.disabled = !ok;
         pBtn.className = ok ? "w-full bg-orange-500 text-white py-5 rounded-3xl font-black text-lg shadow-lg active:scale-95" : "w-full bg-gray-300 text-white py-5 rounded-3xl font-black text-lg shadow-sm cursor-not-allowed";
     };
 
+    curPin.oninput = valPin;
     nPin.oninput = valPin; 
     cPin.oninput = valPin;
 
     pBtn.onclick = async () => {
-        await updateDoc(docRef, { pin: nPin.value });
-        alert("PIN이 변경되었습니다."); 
-        nPin.value = ""; cPin.value = ""; valPin();
+        // 1차 체크: 사용자가 적은 '기존 PIN'이 실제 DB에 저장된 PIN과 일치하는가?
+        if (curPin.value !== dbPin) {
+            alert("기존 PIN 번호가 일치하지 않습니다.");
+            curPin.value = "";
+            curPin.focus();
+            valPin();
+            return;
+        }
+
+        // 2차 체크: 새 PIN이 기존이랑 똑같은가? (선택적 보안 제어)
+        if (nPin.value === dbPin) {
+            alert("새 PIN이 기존 PIN과 같습니다. 다른 번호를 입력해 주세요.");
+            nPin.value = ""; cPin.value = "";
+            nPin.focus();
+            valPin();
+            return;
+        }
+
+        // 전부 이상 없으면 DB 업데이트
+        try {
+            await updateDoc(docRef, { pin: nPin.value });
+            alert("PIN이 성공적으로 변경되었습니다."); 
+            curPin.value = ""; nPin.value = ""; cPin.value = ""; valPin();
+        } catch (e) {
+            console.error("PIN 변경 실패: ", e);
+            alert("변경 중 오류가 발생했습니다. 다시 시도해 주세요.");
+        }
     };
 </script>
 </body>
