@@ -78,12 +78,23 @@
             document.getElementById('center').innerText = data.center_loc || "정보 없음";
 
             // 전화 연결 링크 설정 (DB 필드명: guardian_phone, center_phone)
-            const guardianCall = document.getElementById('call-guardian');
             const centerCall = document.getElementById('call-center');
 
             //보호자 연락
+            const guardianCall = document.getElementById('call-guardian');
+
+            // 기존 이벤트 제거
+            guardianCall.onclick = null;
+            
+            // 보호자 연락
             if (data.guardian_phone) {
-                guardianCall.href = "tel:" + data.guardian_phone;
+                guardianCall.href = `tel:${data.guardian_phone}`;
+            } else {
+                guardianCall.href = "#";
+                guardianCall.onclick = (e) => {
+                    e.preventDefault();
+                    alert("등록된 보호자 연락처가 없습니다.");
+                };
             }
 
             //센터 연락
