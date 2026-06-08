@@ -80,32 +80,21 @@
             // 전화 연결 링크 설정 (DB 필드명: guardian_phone, center_phone)
             const guardianCall = document.getElementById('call-guardian');
             const centerCall = document.getElementById('call-center');
-            
-            // 보호자 연락
-            guardianCall.onclick = null;
-            
+
+            //보호자 연락
             if (data.guardian_phone) {
-                guardianCall.href = `tel:${data.guardian_phone}`;
-            } else {
-                guardianCall.href = "#";
-                guardianCall.onclick = (e) => {
-                    e.preventDefault();
-                    alert("등록된 보호자 연락처가 없습니다.");
-                };
+                guardianCall.href = "tel:" + data.guardian_phone;
             }
-            
-            // 센터 연락
-            centerCall.onclick = null;
-            
+
+            //센터 연락
             if (data.center_phone) {
-                centerCall.href = `tel:${data.center_phone}`;
-            } else {
-                centerCall.href = "#";
-                centerCall.onclick = (e) => {
-                    e.preventDefault();
-                    alert("등록된 센터 연락처가 없습니다.");
-                };
+                centerCall.href = "tel:" + data.center_phone;
             }
+        } else {
+            document.getElementById('name').innerText = "사용자 정보를 찾을 수 없습니다.";
+        }
+    }
+
 
     loadData();
 </script>
