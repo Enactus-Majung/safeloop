@@ -140,10 +140,24 @@
                 mainText.className = "text-2xl font-black mb-2 leading-tight text-gray-900 break-keep";
             }
 
-            // 보호자 전화번호 연결 (DB 필드명: guardian_phone)
+            // // 보호자 전화번호 연결 (DB 필드명: guardian_phone)
+            // const guardianLink = document.getElementById('call-guardian');
+            // if (data.guardian_phone) {
+            //     guardianLink.href = `tel:${data.guardian_phone}`;
+            // }
+
             const guardianLink = document.getElementById('call-guardian');
+
+            guardianLink.onclick = null;
+    
             if (data.guardian_phone) {
                 guardianLink.href = `tel:${data.guardian_phone}`;
+            } else {
+                guardianLink.href = "#";
+                guardianLink.onclick = (e) => {
+                    e.preventDefault();
+                    alert("등록된 보호자 연락처가 없습니다.");
+                };
             }
         } else {
             console.log("문서를 찾을 수 없습니다. ID를 확인해주세요.");
